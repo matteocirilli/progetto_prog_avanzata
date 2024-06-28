@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <header> <style>
+    table {
+      border-collapse: collapse;
+      margin: 10px 10px 10px 10px;
+
+    }
+    td {
+     border: 1px solid;
+     width: 10px;
+     height: 10px;
+    }
+    
+    </style></header>
+<body>
+    <form action="#">
+        <p>simbolo</p>
+        <select name="mossa" id="mossa">
+          <option value="x">x</option>
+          <option value="o">o</option>
+        </select>
+        <p>livello</p>
+        <select name="livello" id="lev">
+            <option value=1>1</option>
+            <option value=2>2</option>
+            <option value=3>3</option>
+            <option value=4>4</option>
+          </select>
+          <p>riga</p>
+          <select name="riga" id="row">
+            <option value=1>1</option>
+            <option value=2>2</option>
+            <option value=3>3</option>
+            <option value=4>4</option>
+            </select>
+            <p>colonna</p>
+          <select name="colonna" id="col">
+            <option value=1>1</option>
+            <option value=2>2</option>
+            <option value=3>3</option>
+            <option value=4>4</option>
+            </select>
+        <button id="bottone"> Fai la mossa</button>
+
+        <button id="login"><a href="/login/">Login</a></button>
+        <button id="login"><a href="/logout/">Logout</a></button>
+
+          
+  </form>
+  
+  <table >
+    <tr><td></td><td></td><td></td><td></td></tr>
+    <tr><td><td></td><td></td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td></tr>
+    </table>
+    <table >
+      <tr><td></td><td></td><td></td><td></td></tr>
+    <tr><td><td></td><td></td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td></tr>
+      </table>
+    <table >
+      <tr><td></td><td></td><td></td><td></td></tr>
+      <tr><td><td></td><td></td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td></tr>
+        </table>
+    <table >
+      <tr><td></td><td></td><td></td><td></td></tr>
+      <tr><td><td></td><td></td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td></tr>
+    </table>
+  </div>
+  <script>
+    document.getElementById('bottone').addEventListener('click', function() {
+        const select = document.getElementById('mossa');
+        const valoreSel = select.value;
+        const select2= document.getElementById('lev');
+        const valoreSel2 = select2.value;
+        const select3= document.getElementById('row');
+        const valoreSel3 = select3.value;
+        const select4= document.getElementById('col');
+        const valoreSel4 = select4.value;
+        fetch('mossa?' + new URLSearchParams({mossa: valoreSel,livello:valoreSel2, riga: valoreSel3, col: valoreSel4,}).toString())
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+                 // Mostra la risposta in un alert
+            })
+            .catch(error => {
+                console.error('Errore:', error);
+            });
+    });
+</script>
+  
+</body>
+</html>
