@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <header> <style>
+    table {
+      border-collapse: collapse;
+      margin: 10px 10px 10px 10px;
+
+    }
+    td {
+     border: 1px solid;
+     width: 10px;
+     height: 10px;
+    }
+    
+    </style></header>
+<body>
+  <p>ciao  <%= nome %>, <%= email %></p>
+    <form id ="mossaForm" action="#">
+        <p>il tuo simbolo è <%= symbol %></p>
+        
+        <p>livello</p>
+        <select name="livello" id="lev">
+            <option value=1>1</option>
+            <option value=2>2</option>
+            <option value=3>3</option>
+            <option value=4>4</option>
+          </select>
+          <p>riga</p>
+          <select name="riga" id="row">
+            <option value=1>1</option>
+            <option value=2>2</option>
+            <option value=3>3</option>
+            <option value=4>4</option>
+            </select>
+            <p>colonna</p>
+          <select name="colonna" id="col">
+            <option value=1>1</option>
+            <option value=2>2</option>
+            <option value=3>3</option>
+            <option value=4>4</option>
+            </select>
+        <button id="bottone"> Fai la mossa</button>
+
+        
+
+       
+
+          
+  </form>
+  <form id = 'form'>
+  <p>Inserisci la mail del tuo avversario</p>
+  <input type = "text" id = 'mail'> </input>
+  <button type="submit"> conferma la mail</button>
+</form>
+  
+  <table >
+    <tr><td id="1a"></td><td id ="2a"></td><td id = "3a"></td><td id ="4a"></td></tr>
+    <tr><td id="5a"></td><td id ="6a"></td><td id = "7a"></td><td id ="8a"></td></tr>
+    <tr><td id="9a"></td><td id ="10a"></td><td id = "11a"></td><td id ="12a"></td></tr>
+    <tr><td id="13a"></td><td id ="14a"></td><td id = "15a"></td><td id ="16a"></td></tr>
+    </table>
+    <table >
+      <tr><td id="1b"></td><td id ="2b"></td><td id = "3b"></td><td id ="4b"></td></tr>
+      <tr><td id="5b"></td><td id ="6b"></td><td id = "7b"></td><td id ="8b"></td></tr>
+      <tr><td id="9b"></td><td id ="10b"></td><td id = "11b"></td><td id ="12b"></td></tr>
+      <tr><td id="13b"></td><td id ="14b"></td><td id = "15b"></td><td id ="16b"></td></tr>
+      </table>
+      <table >
+        <tr><td id="1c"></td><td id ="2c"></td><td id = "3c"></td><td id ="4c"></td></tr>
+        <tr><td id="5c"></td><td id ="6c"></td><td id = "7c"></td><td id ="8c"></td></tr>
+        <tr><td id="9c"></td><td id ="10c"></td><td id = "11c"></td><td id ="12c"></td></tr>
+        <tr><td id="13c"></td><td id ="14c"></td><td id = "15c"></td><td id ="16c"></td></tr>
+        </table>
+        <table >
+          <tr><td id="1d"></td><td id ="2d"></td><td id = "3d"></td><td id ="4d"></td></tr>
+          <tr><td id="5d"></td><td id ="6d"></td><td id = "7d"></td><td id ="8d"></td></tr>
+          <tr><td id="9d"></td><td id ="10d"></td><td id = "11d"></td><td id ="12d"></td></tr>
+          <tr><td id="13d"></td><td id ="14d"></td><td id = "15d"></td><td id ="16d"></td></tr>
+          </table>
+  </div>
+  <script>
+    document.getElementById('bottone').addEventListener('click', function() {
+      event.preventDefault();
+        const select2= document.getElementById('lev');
+        const valoreSel2 = select2.value;
+        const select3= document.getElementById('row');
+        const valoreSel3 = select3.value;
+        const select4= document.getElementById('col');
+        const valoreSel4 = select4.value;
+
+        var mossa = "<%= symbol %>"
+        fetch('mossa?' + new URLSearchParams({mossa: mossa ,livello:valoreSel2, riga: valoreSel3, col: valoreSel4,}).toString())
+            .then(response => response.json())
+            .then(data => {
+              if (data.error) {
+                alert(data.error); 
+            } else {
+                
+                document.getElementById(data.pos).textContent = mossa;
+                
+                if (data.winner === "winner") {
+                    alert("Ha vinto il simbolo " + data.symbol);
+                }
+                else alert(data.pos);
+            }
+        })
+            .catch(error => {
+                console.error('Errore:', error);
+            });
+            
+    });
+
+    document.getElementById('form').addEventListener('submit', function() {
+      fetch('mail?'+ new URLSearchParams({mail: document.getElementById('mail').value,}).toString())
+      .then(response => response.text())
+            .then(data => {
+                alert(data);})
+            .catch(error => {
+                console.error('Errore:', error);
+            });
+            
+    });
+</script>
+  
+</body>
+</html>

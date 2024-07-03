@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+      "target": "es6",                       // Target JavaScript version
+      "module": "commonjs",                  // Module code generation
+      "strict": true,                        // Enable all strict type-checking options
+      "esModuleInterop": true,               // Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports.
+      "skipLibCheck": true,                  // Skip type checking of declaration files
+      "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file.
+      "outDir": "./dist"                     // Redirect output structure to the directory
+    },
+    "include": [
+      "db/**/*.ts",                          // Include all TypeScript files in the db directory
+      "prova.js",                            // Optionally include specific files
+      "server.js"
+    ],
+    "exclude": [
+      "node_modules"                         // Exclude the node_modules directory
+    ]
+  }
