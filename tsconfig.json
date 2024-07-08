@@ -10,7 +10,7 @@
     },
     "include": [
       "db/**/*.ts",                          // Include all TypeScript files in the db directory
-      "prova.js",                            // Optionally include specific files
+      "logica.js",                            // Optionally include specific files
       "server.js"
     ],
     "exclude": [

@@ -9,13 +9,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PartiteDao = exports.UtenteDao = void 0;
+exports.MosseDao = exports.PartiteDao = exports.UtenteDao = void 0;
 exports.syncDb = syncDb;
 const sequelize_1 = require("sequelize");
 const sequelize = new sequelize_1.Sequelize('sqlite::memory:');
 class Utente extends sequelize_1.Model {
 }
 class Partite extends sequelize_1.Model {
+}
+class Mosse extends sequelize_1.Model {
 }
 function syncDb() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -36,6 +38,21 @@ Utente.init({
         type: sequelize_1.DataTypes.FLOAT,
         allowNull: false,
     },
+    vittorie: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    }, vintePerAbbandono: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
+    perse: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
+    persePerAbbandono: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
 }, {
     sequelize,
     modelName: 'Utente',
@@ -52,7 +69,7 @@ Partite.init({
     },
     emailSfidante2: {
         type: sequelize_1.DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
     },
     active: {
         type: sequelize_1.DataTypes.BOOLEAN,
@@ -61,6 +78,28 @@ Partite.init({
 }, {
     sequelize,
     modelName: 'Partite',
+});
+Mosse.init({
+    id: {
+        type: sequelize_1.DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+    },
+    email: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+    },
+    descrizione: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    data: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: true,
+    },
+}, {
+    sequelize,
+    modelName: 'Mosse',
 });
 class UtenteDao {
     create(utente) {
@@ -81,6 +120,27 @@ class UtenteDao {
     findByEmail(email) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield Utente.findOne({ where: { email } });
+        });
+    }
+    update(email, changes) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Utente.update(changes, {
+                where: { email: email }
+            });
+        });
+    }
+    vittoria(email, changes) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Utente.update(changes, {
+                where: { email: email }
+            });
+        });
+    }
+    perdita(email, changes) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Utente.update(changes, {
+                where: { email: email }
+            });
         });
     }
 }
@@ -108,5 +168,39 @@ class PartiteDao {
             });
         });
     }
+    delete(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Partite.destroy({
+                where: { id: id }
+            });
+        });
+    }
 }
 exports.PartiteDao = PartiteDao;
+class MosseDao {
+    create(mossa) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield Mosse.create(mossa);
+        });
+    }
+    read(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Mosse.findByPk(id);
+        });
+    }
+    readAll() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Mosse.findAll();
+        });
+    }
+    readByEmail(email) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Mosse.findAll({
+                where: {
+                    email: email
+                }
+            });
+        });
+    }
+}
+exports.MosseDao = MosseDao;

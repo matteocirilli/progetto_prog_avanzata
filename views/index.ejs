@@ -16,7 +16,7 @@
 <body>
   <p>ciao  <%= nome %>, <%= email %></p>
     <form id ="mossaForm" action="#">
-        <p>il tuo simbolo è <%= symbol %></p>
+        
         
         <p>livello</p>
         <select name="livello" id="lev">
@@ -78,6 +78,44 @@
           <tr><td id="13d"></td><td id ="14d"></td><td id = "15d"></td><td id ="16d"></td></tr>
           </table>
   </div>
+
+  <form>
+    <button id ="abbandona">abbandona</button>
+  </form>
+  <p>tic tac toe 3d</p>
+  <p>----------------------------</p>
+  <form id="classifica">
+    <label for="dataFine">Ordine</label>
+    <select name="ordine" id="ordine">
+      <option value="asc">asc</option>
+      <option value="desc">desc</option>
+    
+  </select>
+    <button type='submit'>classifica</button>
+  </form>
+
+  <form id="formStoricoMosse">
+    <label for="formato">Seleziona il Formato in Uscita:</label>
+    <select name="formato" id="formato">
+        <option value="PDF">PDF</option>
+        <option value="JSON">JSON</option>
+       
+    </select>
+
+    <label for="dataInizio">Data di Inizio:</label>
+    <input type="date" id="dataInizio" name="dataInizio">
+
+    <label for="dataFine">Data di Fine:</label>
+    <input type="date" id="dataFine" name="dataFine">
+
+    <button type="submit">Genera Storico Mosse</button>
+</form>
+
+  <p id = "class"></p>
+</form>
+<form id = 'turno'>
+<button type="submit"> verifica stato partita</button>
+</form>
   <script>
     document.getElementById('bottone').addEventListener('click', function() {
       event.preventDefault();
@@ -88,18 +126,21 @@
         const select4= document.getElementById('col');
         const valoreSel4 = select4.value;
 
-        var mossa = "<%= symbol %>"
-        fetch('mossa?' + new URLSearchParams({mossa: mossa ,livello:valoreSel2, riga: valoreSel3, col: valoreSel4,}).toString())
+        
+        fetch('mossa?' + new URLSearchParams({livello:valoreSel2, riga: valoreSel3, col: valoreSel4,}).toString())
             .then(response => response.json())
             .then(data => {
               if (data.error) {
                 alert(data.error); 
             } else {
                 
-                document.getElementById(data.pos).textContent = mossa;
-                
+               
                 if (data.winner === "winner") {
-                    alert("Ha vinto il simbolo " + data.symbol);
+                  if (data.player === "yes")
+                    alert("hai vinto");
+                  else
+                    alert("hai perso");
+                    
                 }
                 else alert(data.pos);
             }
@@ -110,6 +151,15 @@
             
     });
 
+    document.getElementById('abbandona').addEventListener('click', function () {
+  fetch('\abbandona')
+      .then(response =>response.text())
+        .then(data => {
+          alert(data);})
+          .catch(error => {
+                console.error('Errore:', error);
+            });
+});
     document.getElementById('form').addEventListener('submit', function() {
       fetch('mail?'+ new URLSearchParams({mail: document.getElementById('mail').value,}).toString())
       .then(response => response.text())
@@ -120,6 +170,116 @@
             });
             
     });
+
+    document.getElementById('classifica').addEventListener('submit', function() {
+      event.preventDefault();
+      const ordine = document.getElementById('ordine').value;
+      fetch('classifica?'+ new URLSearchParams({ordine:ordine}).toString())
+      .then(response => response.text())
+            .then(data => {  document.getElementById("class").textContent = data;
+                })
+            .catch(error => {
+                console.error('Errore:', error);
+            });
+            
+    });
+
+    document.getElementById('formStoricoMosse').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const formato = document.getElementById('formato').value;
+    const dataInizio = document.getElementById('dataInizio').value;
+    const dataFine = document.getElementById('dataFine').value;
+
+    fetch(`/storico-mosse?formato=${formato}&dataInizio=${dataInizio}&dataFine=${dataFine}`)
+        .then(response => {
+            // Controlla che la risposta sia OK
+            if (!response.ok) {
+                throw new Error('Errore nella richiesta');
+            }
+            // Determina il tipo di risposta (PDF o JSON)
+            const contentType = response.headers.get('content-type');
+            if (contentType.includes('application/pdf')) {
+                // Se è un PDF, ritorna il blob
+                return response.blob();
+            } else if (contentType.includes('application/json')) {
+                // Se è JSON, ritorna il testo e poi lo parsa come JSON
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (error) {
+                        throw new Error('Errore nel parsing del JSON');
+                    }
+                });
+            } else {
+                throw new Error('Formato di risposta non supportato');
+            }
+        })
+        .then(data => {
+            if (formato === 'PDF') {
+                // Crea un URL oggetto dal blob
+                const url = URL.createObjectURL(data);
+                
+                // Crea un link per scaricare il PDF
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'storico-mosse.pdf';  // Nome del file da scaricare
+                
+                // Aggiungi il link al documento e simula il click
+                document.body.appendChild(a);
+                a.click();
+                
+                // Pulisce l'URL creato
+                window.URL.revokeObjectURL(url);
+            } else if (formato === 'JSON') {
+                // Gestisci il caso JSON
+                console.log('Ricevuto JSON:', data);
+                alert(JSON.stringify(data, null, 2));
+            }
+        })
+        .catch(error => {
+            console.error('Errore durante la richiesta:', error);
+        });
+});
+
+document.getElementById('turno').addEventListener('submit', function() {
+      event.preventDefault();
+      
+      fetch('turno')
+      .then(response => response.text())
+            .then(data => {
+              alert(data);}
+            )
+            .catch(error => {
+                console.error('Errore:', error);
+            });
+            
+    });
+
+
+    function aggiornaStatoPartita() {
+    fetch('/stato-partita')
+        .then(response => response.json())
+        .then(data => {
+            if (data.arrayss) {
+                const arrayss = data.arrayss;
+                arrayss.forEach((levelArray, levelIndex) => {
+                    levelArray.forEach((cellValue, cellIndex) => {
+                        const cellId = (cellIndex + 1) + String.fromCharCode(97 + levelIndex); 
+                        document.getElementById(cellId).textContent = cellValue !== "1" ? cellValue : '';
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Errore:', error);
+        });
+}
+
+
+
+setInterval(aggiornaStatoPartita, 2000);
 </script>
   
 </body>
