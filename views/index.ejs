@@ -117,6 +117,7 @@
 <button type="submit"> verifica stato partita</button>
 </form>
   <script>
+    //event listener per rispondere al click del bottone per effettuare la mossa, che richiama la rotta 'mossa' del server
     document.getElementById('bottone').addEventListener('click', function() {
       event.preventDefault();
         const select2= document.getElementById('lev');
@@ -150,7 +151,7 @@
             });
             
     });
-
+//event listener che risponde al click per l'abbandono della partita
     document.getElementById('abbandona').addEventListener('click', function () {
   fetch('\abbandona')
       .then(response =>response.text())
@@ -160,6 +161,8 @@
                 console.error('Errore:', error);
             });
 });
+
+//event listener che risponde al click quando si inserisce la mail dell'avversario
     document.getElementById('form').addEventListener('submit', function() {
       fetch('mail?'+ new URLSearchParams({mail: document.getElementById('mail').value,}).toString())
       .then(response => response.text())
@@ -170,7 +173,7 @@
             });
             
     });
-
+//event listener per il click per visualizzare la classifica
     document.getElementById('classifica').addEventListener('submit', function() {
       event.preventDefault();
       const ordine = document.getElementById('ordine').value;
@@ -183,7 +186,7 @@
             });
             
     });
-
+// event listener per la visualizzazione dello storico delle mosse
     document.getElementById('formStoricoMosse').addEventListener('submit', function(event) {
     event.preventDefault();
 
@@ -193,17 +196,17 @@
 
     fetch(`/storico-mosse?formato=${formato}&dataInizio=${dataInizio}&dataFine=${dataFine}`)
         .then(response => {
-            // Controlla che la risposta sia OK
+           
             if (!response.ok) {
                 throw new Error('Errore nella richiesta');
             }
-            // Determina il tipo di risposta (PDF o JSON)
+         
             const contentType = response.headers.get('content-type');
             if (contentType.includes('application/pdf')) {
-                // Se è un PDF, ritorna il blob
+          
                 return response.blob();
             } else if (contentType.includes('application/json')) {
-                // Se è JSON, ritorna il testo e poi lo parsa come JSON
+             
                 return response.text().then(text => {
                     try {
                         return JSON.parse(text);
@@ -217,23 +220,23 @@
         })
         .then(data => {
             if (formato === 'PDF') {
-                // Crea un URL oggetto dal blob
+               
                 const url = URL.createObjectURL(data);
                 
-                // Crea un link per scaricare il PDF
+                
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = 'storico-mosse.pdf';  // Nome del file da scaricare
+                a.download = 'storico-mosse.pdf'; 
                 
-                // Aggiungi il link al documento e simula il click
+              
                 document.body.appendChild(a);
                 a.click();
                 
-                // Pulisce l'URL creato
+                
                 window.URL.revokeObjectURL(url);
             } else if (formato === 'JSON') {
-                // Gestisci il caso JSON
+           
                 console.log('Ricevuto JSON:', data);
                 alert(JSON.stringify(data, null, 2));
             }
@@ -242,7 +245,7 @@
             console.error('Errore durante la richiesta:', error);
         });
 });
-
+//event listener per la visualizzazione del turno di gioco
 document.getElementById('turno').addEventListener('submit', function() {
       event.preventDefault();
       
@@ -257,7 +260,7 @@ document.getElementById('turno').addEventListener('submit', function() {
             
     });
 
-
+//funzione che va a prendere i valori degli array che rappresentano i contenuti delle 4 tabelle per visualizzarli a schermo
     function aggiornaStatoPartita() {
     fetch('/stato-partita')
         .then(response => response.json())
@@ -278,7 +281,7 @@ document.getElementById('turno').addEventListener('submit', function() {
 }
 
 
-
+//ogni 2 secondi viene eseguita la funzione aggiornaStatoPartita
 setInterval(aggiornaStatoPartita, 2000);
 </script>
   

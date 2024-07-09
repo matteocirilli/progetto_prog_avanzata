@@ -9,12 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MosseDao = exports.PartiteDao = exports.UtenteDao = void 0;
+exports.MosseDao = exports.PartiteDao = exports.UtenteDao = exports.Utente = void 0;
 exports.syncDb = syncDb;
 const sequelize_1 = require("sequelize");
 const sequelize = new sequelize_1.Sequelize('sqlite::memory:');
 class Utente extends sequelize_1.Model {
 }
+exports.Utente = Utente;
 class Partite extends sequelize_1.Model {
 }
 class Mosse extends sequelize_1.Model {

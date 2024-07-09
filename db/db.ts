@@ -1,8 +1,10 @@
 import { Sequelize, DataTypes, Model } from 'sequelize';
 
+//definizione di database sqlite in memory
 const sequelize = new Sequelize('sqlite::memory:');
 
-class Utente extends Model {
+//definizione dei modelli 
+export class Utente extends Model {
     public id!: number;
     public email!: string;
     public token!: number;
@@ -27,13 +29,14 @@ class Mosse extends Model
     public data!: Date;
 }
 
+//funzione per sincronizzare modelli nel codice con tabelle definite nel database
 export async function syncDb (): Promise<void> {
     await sequelize.sync();
 }
 
 
 
-
+//inizializzazione dei modelli
 Utente.init(
     {
         id: {
@@ -137,13 +140,14 @@ Mosse.init(
 
 
 
-
+//interfaccia del DAO
 interface IDao<T> {
     create(user: T): Promise<void>;
     read(id: number): Promise<T | null>;
     readAll(): Promise<T[]>;
 }
 
+//implementazioni dei Dao per le varie tabelle
 export class UtenteDao implements IDao<Utente> {
     async create(utente: { email: string; token: number }): Promise<void> {
         await Utente.create(utente);
@@ -225,3 +229,4 @@ export class MosseDao implements IDao<Mosse> {
         });
     }
 }
+

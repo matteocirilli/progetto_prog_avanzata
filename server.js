@@ -1,3 +1,4 @@
+//importazioni di moduli, file javascript all'interno del codice
 const logica = require('./logica.js');
 const express = require("express");
 const app = express();
@@ -11,17 +12,37 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 
 
-
-const { UtenteDao, PartiteDao,MosseDao, syncDb } = require('./dist/db.js');
-
+//istanziazione variabili di Dao e Database
+const { UtenteDao, PartiteDao,MosseDao, syncDb, Utente } = require('./dist/db.js');
 const utenteDao = new UtenteDao();
 const partiteDao = new PartiteDao();
 const mosseDao = new MosseDao ();
 
+//variabili che conterranno partite e turni
 var partiteLocal =  [];
 var turni = [];
-syncDb();
 
+//funzione/script di seed
+async function seedUtenti() {
+    await syncDb();
+
+    await Utente.bulkCreate([
+        { email: 'matteo_cirilli@outlook.it', token: 100, vittorie: 0, vintePerAbbandono: 0, perse: 0, persePerAbbandono: 0 },
+        { email: 'mariorossi@gmail.com', token: 200, vittorie: 0, vintePerAbbandono:0, perse: 0, persePerAbbandono: 0 },
+       
+    ]);
+
+    console.log("Utenti seeding completed.");
+}
+//attivazione funzione dello script di seed del database
+seedUtenti().catch((error) => {
+    console.error("Utenti seeding failed: ", error);
+});
+
+//funzione middleware per analizzare corpo delle richieste HTTP con contenuto JSON
+app.use(express.json());
+
+//funzione middleware per l'utilizzo delle sessioni
 app.use(session({
     store: new MemoryStore({
         checkPeriod: 86400000 
@@ -32,12 +53,14 @@ app.use(session({
     cookie: { secure: false }
 }));
 
-const tokens = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hdHRlb19jaXJpbGxpQG91dGxvb2suaXQiLCJuYW1lIjoiTWF0dGVvIENpcmlsbGkiLCJpYXQiOjE1MTYyMzkwMjJ9.wXUdtn0C9KWU7mgdf09D2KQo3DSfmCqpjLKBAbW203U',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcmlvcm9zc2lAZ21haWwuY29tIiwibmFtZSI6Ik1hcmlvIFJvc3NpIiwiaWF0IjoxNTE2MjM5MDIyfQ.abcdc7GTOnNxfzaNftwTv1cdR9GWBgxkSR1EhJRXoBo'
+//token predefiniti
+const tokens = ['eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hdHRlb19jaXJpbGxpQG91dGxvb2suaXQiLCJuYW1lIjoiTWF0dGVvIENpcmlsbGkiLCJpYXQiOjE1MTYyMzkwMjJ9.Aq9GfDrmAsjAIuGeq3Fcx0mp4im4qh_xArLTUsK0POk',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcmlvcm9zc2lAZ21haWwuY29tIiwibmFtZSI6Ik1hcmlvIFJvc3NpIiwiaWF0IjoxNTE2MjM5MDIyfQ.ntdBL8d-nZIsQJYWA13BqP7NimquTRgQPY5QF7O-9v0'
 ]
 
+//funzione middleware che verifica se c'è un token nell'header e nel caso lo mette nella richiesta
 function checkToken (req,res,next){
-   /*const bearerHeader = req.headers.authorization;
+   const bearerHeader = req.headers.authorization;
     if (typeof bearerHeader!=='undefined') {
         const bearerToken = bearerHeader.split(' ')[1];
         req.token=bearerToken;
@@ -45,12 +68,12 @@ function checkToken (req,res,next){
         console.log(req.token);
     }
     else {
-        res.sendStatus(403);
-   }*/
+        res.status(403).json({error: "non ti sei autenticato"});
+   }
   
-   // req.token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hdHRlb19jaXJpbGxpQG91dGxvb2suaXQiLCJuYW1lIjoiTWF0dGVvIENpcmlsbGkiLCJpYXQiOjE1MTYyMzkwMjJ9.wXUdtn0C9KWU7mgdf09D2KQo3DSfmCqpjLKBAbW203U';
+  
     
-   if (req.session.token) {
+/*if (req.session.token) {
     
     req.token = req.session.token;
 } else {
@@ -58,38 +81,170 @@ function checkToken (req,res,next){
     req.session.token = tokens[Math.floor(Math.random() * tokens.length)];
     req.token = req.session.token;
 }
-next();
+next();*/
    
   }
-function verifyAndAuthenticate (req,res,next){
-    let decoded = jwt.verify (req.token, 'aaa');
-    if (decoded !== null)
+
+  //funzione middleware per autenticare il token tramite chiave privata, se l'utente non esiste lo crea e mette nella sessione email dell'avversario
+  //e id del match (se esiste)
+async function verifyAndAuthenticate (req,res,next){
+    let decoded = jwt.verify (req.token, process.env.SECRET_KEY);
+    if (decoded !== null){
         req.user=decoded;
+        req.session.personalEmail=req.user.email;
+        var utente;
+    utente = await utenteDao.findByEmail(req.user.email);
+    
+    if (utente==null)
+        await utenteDao.create({ email: req.user.email, token: 50, vittorie: 0, vintePerAbbandono: 0, perse: 0, persePerAbbandono:0 })
+    }
+    const partite = await partiteDao.readAll();
+    const partita = partite.find(p => p.emailSfidante1 === req.session.personalEmail || p.emailSfidante2 === req.session.personalEmail);
+    if (partita) {
+        req.session.idMatch = partita.id;
+    if(req.session.personalEmail===partita.emailSfidante1)
+        req.session.email=partita.emailSfidante2;
+    if(req.session.personalEmail===partita.emailSfidante2)
+        req.session.email=partita.emailSfidante1;
+    }
     next();
+}
+
+//funzione middleware per verificare validità email
+function isValidEmail(req,res,next) {
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+   
+    if(!emailRegex.test(req.query.mail))
+        res.status(403).json({error: 'formato email non valido'});
+    else
+        next();
+}
+
+//funzione middleware per verificare presenza del parametro di query ordine, di valore asc o desc, per visualizzare la classifica
+function descAsc (req,res,next){
+    if (req.query.ordine) {
+        if (req.query.ordine==="asc"||req.query.ordine==="desc")
+            next();
+        else
+        res.status(403).json({error: 'inserisci asc o desc come valore del parametro ordine'});
+    }
+    else
+    res.status(403).json({error: 'inserisci il parametro ordine, con asc o desc'});
+    
+}
+
+//funzione middleware per verificare se è stata già inserita l'email dell'avversario
+function alreadyMail (req, res, next) {
+    if (req.session.email)
+        res.status(403).json({error: 'la mail è già stata inserita'});
+    else
+        next();
+}
+
+//funzione middleware per verificare se token sono minori di 0.5 (costo di una partita)
+async function numToken (req, res, next) {
+    
+    var user = await utenteDao.findByEmail(req.session.personalEmail);
+            numTok = user.token;
+            console.log(numTok);
+            console.log("numero token");
+            if (numTok < 0.5) {
+                res.status(401).json({error:'Unauthorized'});}
+                else
+                next();
+}
+
+//funzione middleware per verificare se parametri della select siano giusti (formato storico mosse)
+function selectStorico (req, res,next) {
+    if (!req.query.formato || !req.query.dataInizio ||!req.query.dataFine)
+    res.status(403).json({error: 'mancano uno o più parametri tra: dataInizio, dataFine e formato'});
+   else if (req.query.formato!== "JSON"&& req.query.formato !== "PDF")
+   res.status(403).json({error: 'formato non valido'});
+    
+    else next();
+
+        
+}
+//funzione middleware per verificare se ci sia o meno partita da abbandonare
+function checkAbbandona(req,res, next) {
+    if (!req.session.idMatch)
+        res.status(403).json({error:"nessuna partita da abbandonare"});
+    else
+    next();
+}
+
+//funzione middleware per verificare se ci sia partita di cui verificare il turno, e se sia o meno iniziata
+async function checkPartita (req,res,next) {
+    const partite = await partiteDao.readAll();
+    const partita = partite.find(p => p.emailSfidante1 === req.session.personalEmail || p.emailSfidante2 === req.session.personalEmail);
+if (!partita)
+{
+    res.status(403).json( {error:"non c'è nessuna partita in corso" });
+}
+else {
+    if (partita.active===false) {
+        res.status(403).json({error:"la partita deve ancora iniziare"});
+    
+    }
+}
+}
+
+//funzione middleware per verificare se l'utente sia di ruolo admin, e se abbia inserito parametri giusti nel corpo della post
+async function verifyAdmin (req, res, next) {
+    var user;
+    console.log(req.user);
+    console.log(req.body);
+        if (req.user.admin) {
+    if (req.body){
+    if(req.body.email) {
+        user = await utenteDao.findByEmail(req.body.email);
+    if (!user)
+        res.status(403).json({error: 'non esiste un utente con questa mail'});
+    else
+        next();}
+    else 
+    res.status(403).json({error: 'devi inserire la mail'}); }
+    else
+        res.status(403).json({error: 'devi inserire il body'});
+    }
+    else
+        res.status(403).json({error: 'devi essere admin per fare questa operazione'});
+}
+
+//funzione middleware per verificare se l'admin abbia inserito i token da aggiungere nel corpo della post
+async function verifyToken (req,res, next){
+    if (!req.body.token)
+    {
+        res.status(403).json({error: 'inserisci il numero di token da aggiungere'});
+    }
+    else if (!(Number.isInteger(req.body.token) && req.body.token > 0))
+        res.status(403).json({error: 'il numero non è corretto'});
+    else {
+        next();
+
+    }
 }
 
 
 
 
-app.use(checkToken);
-app.use(verifyAndAuthenticate);
 
-
+//configurazione di ejs (embedded javascript) come motore di rendering
 app.set('view engine', 'ejs');
+
 var sym = ["x", "o"];
-//var symbol = sym[Math.floor(Math.random() *2)];
-app.get('/',async function(req,res) {
-    var utente;
-    utente = await utenteDao.findByEmail(req.user.email);
+
+//rotta autenticata che restituisce la pagina iniziale
+app.get('/', checkToken, verifyAndAuthenticate, async function(req,res) {
     
-    if (utente==null)
-        await utenteDao.create({ email: req.user.email, token: 50, vittorie: 0, vintePerAbbandono: 0, perse: 0, persePerAbbandono:0 })
    
-    req.session.personalEmail = req.user.email;
+    
   
     
     var partite = await partiteDao.readAll();
-    var bool;
+  
     partite.forEach(async partita => {
         console.log(partita.id);
         if(partita.emailSfidante2===req.session.personalEmail&& partita.active===false) {
@@ -120,12 +275,16 @@ app.get('/',async function(req,res) {
         nome : req.user.name,
         
  });
-})
-app.get('/mossa', async function(req,res){
+});
+
+//rotta autenticata per effettuare una mossa
+app.get('/mossa',checkToken, verifyAndAuthenticate, async function(req,res){
    var sym;
    var occupata = false;
+   console.log(req.session.email);
+  
     if (!req.session.email){
-       res.json({ error: "inserisci la mail del tuo avversario!" });
+        res.status(403).json({ error: "inserisci la mail del tuo avversario!" });
         }
         else {  
             
@@ -142,7 +301,7 @@ app.get('/mossa', async function(req,res){
         }
             });
 if (!flag)
-    res.json({ error: "aspetta il tuo avversario!" });
+    res.status(403).json({ error: "aspetta il tuo avversario!" });
 else {
  
     
@@ -158,7 +317,7 @@ else {
 
     var partitaa = await partiteDao.read(req.session.idMatch);
   if ((turni[partitaa.id]===1 &&req.session.personalEmail===partitaa.emailSfidante2)||(turni[partitaa.id]===2&&req.session.personalEmail===partitaa.emailSfidante1)) {
-        res.json({ error: "non è il tuo turno!" });
+        res.status(403).json({ error: "non è il tuo turno!" });
     }
     else {
 
@@ -224,7 +383,7 @@ else {
         pos: (index + 1).toString() + x,
     });}
     else {
-        res.json({ error: "la posizione è già occupata!" });
+        res.status(403).json({ error: "la posizione è già occupata!" });
         occupata = true;
     }
     if (!occupata) {
@@ -245,16 +404,9 @@ console.log("mosse");
 console.log(mosse);
 }
     );
-
-    app.get('/mail',async  function(req, res){
-        if (!req.session.email) {
-            var user = await utenteDao.findByEmail(req.session.personalEmail);
-            numTok = user.token;
-            console.log(numTok);
-            console.log("numero token");
-            if (numTok < 0.5) {
-                res.status(401).send('Unauthorized');}
-            else {
+//rotta autenticata per inserire la mail dell'avversario
+    app.get('/mail',checkToken, verifyAndAuthenticate,alreadyMail, isValidEmail, numToken, async  function(req, res){
+       
             req.session.email = req.query.mail;
             await partiteDao.create({
                 emailSfidante1: req.session.personalEmail,
@@ -266,26 +418,24 @@ console.log(mosse);
             
             res.send(req.session.email);
             
-        } }
-        else 
-            res.send('hai già inserito la mail');
-    });
-
-    app.get('/stato-partita', async function(req, res) {
+        }     
+    );
+//rotta autenticata che serve al file ejs per ottenere gli array in cui ci sono i contenuti delle 4 tabelle del gioco
+    app.get('/stato-partita', checkToken, verifyAndAuthenticate,async function(req, res) {
         const partite = await partiteDao.readAll();
         const partita = partite.find(p => p.emailSfidante1 === req.session.personalEmail || p.emailSfidante2 === req.session.personalEmail);
         
         if (partita) {
             var arrayss = partiteLocal[partita.id];
             res.json({ arrayss });
-        } else {
-            res.status(404).json({ error: "Partita non trovata" });
         }
     });
+//rotta autenticata per abbandonare la partita
+    app.get('/abbandona', checkToken, verifyAndAuthenticate,checkAbbandona,async function (req, res) {
 
-    app.get('/abbandona', async function (req, res) {
-       
-            const match = await partiteDao.read(req.session.idMatch);
+      
+        
+            match = await partiteDao.read(req.session.idMatch);
     
         
             let opponentEmail = match.emailSfidante1 === req.session.personalEmail ? match.emailSfidante2 : match.emailSfidante1;
@@ -294,7 +444,7 @@ console.log(mosse);
             req.sessionStore.all(async (err, sessions) =>  {
                 if (err) {
                     console.error('Errore durante l\'accesso alle sessioni:', err);
-                    res.status(500).json({ error: "Errore durante l'accesso alle sessioni" });
+                    res.status(500).json( {error:"Errore durante l'accesso alle sessioni"} );
                     return;
                 }
     
@@ -314,12 +464,13 @@ console.log(mosse);
                         }
                     });
                 }
-                var winner = await utenteDao.findByEmail(req.session.email);
+                var winner = await utenteDao.findByEmail(opponentEmail);
                 var loser = await utenteDao.findByEmail(req.session.personalEmail);
                 console.log(winner);
+                
                 console.log(loser);
                 console.log("winner loser.........");
-                await utenteDao.vittoria(req.session.email, {vittorie: winner.vittorie + 1, vintePerAbbandono: winner.vintePerAbbandono +1 });
+                await utenteDao.vittoria(opponentEmail, {vittorie: winner.vittorie + 1, vintePerAbbandono: winner.vintePerAbbandono +1 });
                 await utenteDao.perdita(req.session.personalEmail, {perse: loser.perse + 1, persePerAbbandono: loser.persePerAbbandono +1 });
                 await partiteDao.delete(req.session.idMatch);
                 delete partiteLocal[req.session.idMatch];
@@ -328,34 +479,14 @@ console.log(mosse);
                 
                 res.send("Partita abbandonata con successo");
             });
-
+        }
      
-    });
-
-   /* app.get('/classifica', async function (req,res) {
-        var utenti = await utenteDao.readAll();
-        var classif = {};
-        utenti.forEach(u => classif[u.email] = u.vittorie);
-   
-    let sortable = [];
-    for (var x in classif) {
-    sortable.push([x, classif[x]]);
-}
-
-    sortable.sort((a, b) =>
-    (b[1]-a[1])); 
-
-    console.log(sortable);
-console.log("classificaaaa");
-
-var classifica = "";
-sortable.forEach(x => classifica = classifica + " " + x[0] + ": " + x[1] + ", ");
-res.send(classifica);
-});*/
+    );
 
 
 
-  app.get('/classifica', async (req, res) => {
+//rotta pubblica per ottenere la classifica dei giocatori
+  app.get('/classifica', descAsc, async (req, res) => {
     const { ordine = 'desc' } = req.query;
     
    
@@ -389,16 +520,16 @@ res.send(classifica);
       res.send(stringClass);
      
   });
-
-  app.get('/storico-mosse', async (req, res) => {
+//rotta autenticata per ottenere lo storico delle mosse
+  app.get('/storico-mosse',checkToken, verifyAndAuthenticate, selectStorico, async (req, res) => {
     const { formato, dataInizio, dataFine } = req.query;
     const email = req.session.email;
     
-    // Parsing delle date
+  
     const startDate = new Date(dataInizio);
     const endDate = new Date(dataFine);
     
-    // Query per ottenere le mosse filtrate per email e intervallo di date
+   
     const mosse = await mosseDao.readByEmail(req.session.personalEmail);
 
     const filteredMosse = mosse.filter(mossa => {
@@ -414,10 +545,10 @@ res.send(classifica);
         res.setHeader('Content-Disposition', 'attachment; filename=storico-mosse.pdf');
         res.setHeader('Content-Type', 'application/pdf');
 
-        // Pipe the document to the response
+        
         doc.pipe(res);
 
-        // Aggiungi il contenuto al PDF
+       
         doc.text('Storico Mosse');
         filteredMosse.forEach(mossa => {
             doc.text(`ID: ${mossa.id}`);
@@ -427,42 +558,44 @@ res.send(classifica);
             doc.moveDown();
         });
 
-        // Finalizzare il documento PDF
+     
         doc.end();
-    } else {
-        res.status(400).send('Formato non supportato');
-    }
+    } 
 });
 
-app.get('/turno', async (req,res)=> {
-    const partite = await partiteDao.readAll();
-    const partita = partite.find(p => p.emailSfidante1 === req.session.personalEmail || p.emailSfidante2 === req.session.personalEmail);
-if (!partita)
-{
-    res.send( "non c'è nessuna partita in corso" );
-}
-else {
-    if (partita.active===false) {
-        res.send("la partita deve ancora iniziare");
+//rotta autenticata per verificare di chi è il turno
+app.get('/turno',checkToken, verifyAndAuthenticate, checkPartita, async (req,res)=> {
+
     
-    }
-    else {
         if (((partita.emailSfidante1===req.session.personalEmail)&& (turni[partita.id]===1)) ||((partita.emailSfidante2===req.session.personalEmail)&& (turni[partita.id]===2)))
             res.send("è il tuo turno");
         else
         res.send("non è il tuo turno");
 
     }
-}
 
-});
+
+);
+
+//rotta autenticata e riservata all'admin (post) per effettuare la ricarica di token 
+app.post('/ricarica', checkToken, verifyAndAuthenticate, verifyAdmin, verifyToken, async (req, res) => {
+    var utente = await utenteDao.findByEmail(req.body.email);
+        const tokens=utente.token;
+         const nuoviToken = tokens + req.body.token;
+       await utenteDao.update(req.body.email, {token: nuoviToken});
+
+        res.json({token_precedenti: tokens, 
+            token_aggiunti: req.body.token, 
+            token_attuali: nuoviToken
+        });
+})
 
 
   
     
     
 
-
+//server in ascolto sulla porta 3000
 app.listen(3000);
 
 
